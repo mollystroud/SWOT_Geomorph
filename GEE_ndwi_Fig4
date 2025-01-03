@@ -1,0 +1,66 @@
+/**** Start of imports. If edited, may not auto-convert in the playground. ****/
+var geometry = 
+    /* color: #d63000 */
+    /* shown: false */
+    /* displayProperties: [
+      {
+        "type": "rectangle"
+      }
+    ] */
+    ee.Geometry.Polygon(
+        [[[-94.15359428793933, 44.13547909509888],
+          [-94.15359428793933, 44.04374674745631],
+          [-94.0643303719237, 44.04374674745631],
+          [-94.0643303719237, 44.13547909509888]]], null, false);
+/***** End of imports. If edited, may not auto-convert in the playground. *****/
+// pre-dam image:
+var collection = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+    .filterBounds(geometry)
+    .filterDate('2024-06-07', '2024-06-08')
+    .select(['B4', 'B3', 'B2', 'B8'])
+    .median();
+// post-dam image:
+var collection2 = ee.ImageCollection('COPERNICUS/S2_SR_HARMONIZED')
+    .filterDate('2024-07-07', '2024-07-08')
+    .filterBounds(geometry)
+    .select(['B4', 'B3', 'B2', 'B8'])
+    .median();
+    
+// clip    
+var clipImage = collection.clip(geometry);
+var clipImage2 = collection2.clip(geometry);
+// viz
+var visualization = {
+  min: 0,
+  max: 3000,
+  bands: ['B4', 'B3', 'B2'],
+}
+// add to map
+Map.addLayer(clipImage, visualization, '6-08')
+Map.addLayer(clipImage2, visualization, '7-08')
+Map.centerObject(geometry, 12)
+// water mask
+var ndwi =
+    clipImage.normalizedDifference(['B3', 'B8']).rename('NDWI');
+//var ndwiParams = {min: -1, max: 1, palette:['red', 'yellow', 'green', 'cyan', 'blue']};
+var ndwiParams = {min: -1, max: 1, palette:['white', '0096C7', '023E8A']};
+Map.addLayer(
+    ndwi,
+    ndwiParams,
+    'NDWI');
+// export ndwi image
+Export.image.toDrive({
+  image: ndwi.visualize(ndwiParams),
+  description: 'image_export',
+  folder: 'SWOT_geomorph',
+  region: geometry,
+  scale: 12
+});
+// export real color image
+//Export.image.toDrive({
+  //image: clipImage.visualize(visualization),
+  //description: 'image_export',
+  //folder: 'SWOT_geomorph',
+  //region: geometry,
+  //scale: 12
+//});
